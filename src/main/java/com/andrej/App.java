@@ -1,10 +1,19 @@
 package com.andrej;
 
 
+import com.mysql.cj.protocol.FullReadInputStream;
+import com.mysql.cj.x.protobuf.MysqlxCrud;
+
 import javax.swing.*;
 import java.awt.*;
 import java.awt.event.ActionEvent;
 import java.awt.event.ActionListener;
+import java.awt.event.ComponentAdapter;
+import java.io.FileInputStream;
+import java.io.FileNotFoundException;
+import java.io.IOException;
+import java.sql.*;
+import java.util.Properties;
 
 public class App implements ActionListener{
     private JPanel panelContainer;
@@ -60,7 +69,7 @@ public class App implements ActionListener{
     private JLabel Password;
     private JButton exitButtonWelcome;
     private JLabel Greeting;
-
+    private JButton deleteButton;
 
 
     public App() {
@@ -76,13 +85,24 @@ public class App implements ActionListener{
         resetButtonAdmin.setActionCommand("Reset");
         resetButtonAdmin.addActionListener(this);
 
+        publishButton.setActionCommand("Publish");
+        publishButton.addActionListener(this);
+        publishButtonAdmin.setActionCommand("Publish");
+        publishButtonAdmin.addActionListener(this);
 
+        FindButtonAdmin.setActionCommand("Find");
+        FindButtonAdmin.addActionListener(this);
 
-        };
+    };
         
 
 
-    public static void main(String[] args) {
+    public static void main(String[] args)  {
+
+
+
+
+
         JFrame frame = new JFrame("Car System Management");
 
         frame.setContentPane(new App().panelContainer);
@@ -140,6 +160,169 @@ public class App implements ActionListener{
                 System.exit(0);
             }
         }
+        else if (e.getActionCommand().equals("Publish"))
+        {
+            JFrame publishFrame = new JFrame("Publish");
+            int response = JOptionPane.showConfirmDialog(publishFrame, "Confirm if you want to publish",
+                    "Publish", JOptionPane.YES_NO_OPTION);
+
+
+            if (response == JOptionPane.YES_OPTION) {
+                Connection myConn = null;
+                PreparedStatement myStmt = null;
+
+
+
+                try{
+                    Properties props = new Properties();
+                    props.load(new FileInputStream("sql.properties"));
+
+                    String theUser = props.getProperty("user");
+                    String thePassword = props.getProperty("password");
+                    String theDburl = props.getProperty("dburl");
+
+                    myConn = DriverManager.getConnection(theDburl, theUser, thePassword);
+                    String sqlInsert = "INSERT INTO customer_info (FirstName,LastName,Town,ZIP,Address,Accessories,Maker,Model,Mileage,Year,Price) VALUE (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)";
+                    myStmt = myConn.prepareStatement(sqlInsert);
+                    myStmt.setString(1, fNameTxt.getText());
+                    myStmt.setString(2,lNameTxt.getText());
+                    myStmt.setString(3, townTxt.getText());
+                    myStmt.setInt(4, Integer.parseInt(zipTxt.getText()));
+                    myStmt.setString(5,addressTxt.getText());
+
+                    String sqlAccessories = "";
+                    if(stereoCheckBox.isSelected())
+                    {
+                        String stereo = "Stereo,";
+                        sqlAccessories += stereo;
+                    }
+                    if(customizedCheckBox.isSelected())
+                    {
+                        String customized = "Customized,";
+                        sqlAccessories += customized;
+                    }
+                    if(leatherCheckBox.isSelected())
+                    {
+                        String leather = "Leather,";
+                        sqlAccessories += leather;
+                    }
+                    if(modifiedCheckBox.isSelected())
+                    {
+                        String modified = "Modified,";
+                        sqlAccessories += modified;
+                    }
+                    if(GPSCheckBox.isSelected())
+                    {
+                        String gps = "GPS,";
+                        sqlAccessories += gps;
+                    }
+                    if(electricWindowsCheckBox.isSelected())
+                    {
+                        String windows = "Electric Windows,";
+                        sqlAccessories += windows;
+                    }
+
+                    myStmt.setString(6,sqlAccessories);
+
+                    myStmt.setString(7,(String) comboBox1.getSelectedItem());
+                    myStmt.setString(8,modelTxt.getText());
+                    myStmt.setInt(9,Integer.parseInt(mileageTxt.getText()));
+                    myStmt.setInt(10,Integer.parseInt(yearTxt.getText()));
+                    myStmt.setInt(11,Integer.parseInt(priceTxt.getText()));
+
+
+                    myStmt.executeUpdate();
+
+
+                    myConn.close();
+                    myStmt.close();
+
+                }
+                catch(Exception exc){
+                    exc.printStackTrace();
+                }
+
+                }
+            else if (response == JOptionPane.NO_OPTION) {
+                publishFrame.dispose();
+            } else if (response == JOptionPane.CLOSED_OPTION) {
+                publishFrame.dispose();
+            }
+        }
+        else if (e.getActionCommand().equals("Find"))
+        {
+
+                Connection myConn = null;
+                PreparedStatement myStmt = null;
+                ResultSet myRs= null;
+
+
+                try{
+                    Properties props = new Properties();
+                    props.load(new FileInputStream("sql.properties"));
+
+                    String theUser = props.getProperty("user");
+                    String thePassword = props.getProperty("password");
+                    String theDburl = props.getProperty("dburl");
+
+                    myConn = DriverManager.getConnection(theDburl, theUser, thePassword);
+                    String sqlInsert = "SELECT FirstName,LastName,Town,Zip,Address,Accessories,Maker,Model,Mileage,Year,Price FROM customer_info WHERE CustomerID=?";
+                    myStmt = myConn.prepareStatement(sqlInsert);
+                    myStmt.setInt(1, Integer.parseInt(idTxt.getText()));
+                    myRs = myStmt.executeQuery();
+                    while(myRs.next()) {
+                        fNameTxt.setText(myRs.getString("FirstName"));
+                        lNameTxt.setText(myRs.getString("LastName"));
+                        townTxt.setText(myRs.getString("Town"));
+                        zipTxt.setText(myRs.getString("Zip"));
+                        addressTxt.setText(myRs.getString("Address"));
+                        mileageTxt.setText(myRs.getString("Mileage"));
+                        yearTxt.setText(myRs.getString("Year"));
+                        priceTxt.setText(myRs.getString("Price"));
+                        comboBox1.setSelectedItem(myRs.getString("Maker"));
+                        modelTxt.setText(myRs.getString("Model"));
+
+
+                        if (myRs.getString("Accessories").contains("Stereo")){
+                            stereoCheckBox.setSelected(true);
+                        }
+                        if (myRs.getString("Accessories").contains("Customized")) {
+                            customizedCheckBox.setSelected(true);
+                        }
+                        if (myRs.getString("Accessories").contains("Leather")) {
+                            leatherCheckBox.setSelected(true);
+                        }
+                        if (myRs.getString("Accessories").contains("Modified")) {
+                            modifiedCheckBox.setSelected(true);
+                        }
+                        if (myRs.getString("Accessories").contains("GPS")) {
+                            GPSCheckBox.setSelected(true);
+                        }
+                        if (myRs.getString("Accessories").contains("Electric Windows")) {
+                            electricWindowsCheckBox.setSelected(true);
+                        }
+                    }
+
+
+
+
+
+                    myConn.close();
+                    myStmt.close();
+                    myRs.close();
+
+                }
+                catch(Exception exc){
+                    exc.printStackTrace();
+                }
+
+            }
+        else if (e.getActionCommand().equals("Delete"))
+        {
+            
+        }
+
+        }
     }
-    }
+
 
