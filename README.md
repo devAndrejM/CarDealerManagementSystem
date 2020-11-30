@@ -6,12 +6,18 @@ Instructions:
 
 1. For admin account use username: admin and password: admin, for username: user and password: user or just simply create new account.
 
-Login page:
+Login page:<br />
+
+
 ![](images/login.jpg)
 
-Admin view:
+Admin view:<br />
+
+
 ![](images/admin.jpg)
 
-User view: 
+User view: <br />
+
+
 ![](images/user.jpg)
 
